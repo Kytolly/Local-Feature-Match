@@ -1,0 +1,437 @@
+\section{代码示例}
+
+核心代码如代码1所示。
+
+\begin{lstlisting}[caption={student.py}, label={lst:code-example}, captionpos=t, language=python]
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from skimage import feature, img_as_int
+  from skimage.measure import regionprops
+  import cv2
+  from skimage.filters import gaussian, sobel_h, sobel_v
+  
+  
+  def get_interest_points(image, feature_width):
+      '''
+      Returns a set of interest points for the input image
+  
+      (Please note that we recommend implementing this function last and using cheat_interest_points()
+      to test your implementation of get_features() and match_features())
+  
+      Implement the Harris corner detector (See Szeliski 4.1.1) to start with.
+      You do not need to worry about scale invariance or keypoint orientation estimation
+      for your Harris corner detector.
+      You can create additional interest point detector functions (e.g. MSER)
+      for extra credit.
+  
+      If you're finding spurious (false/fake) interest point detections near the boundaries,
+      it is safe to simply suppress the gradients / corners near the edges of
+      the image.
+  
+      Useful functions: A working solution does not require the use of all of these
+      functions, but depending on your implementation, you may find some useful. Please
+      reference the documentation for each function/library and feel free to come to hours
+      or post on Piazza with any questions
+  
+          - skimage.feature.peak_local_max
+          - skimage.measure.regionprops
+  
+  
+      :params:
+      :image: a grayscale or color image (your choice depending on your implementation)
+      :feature_width:
+  
+      :returns:
+      :xs: an np array of the x coordinates of the interest points in the image
+      :ys: an np array of the y coordinates of the interest points in the image
+  
+      :optional returns (may be useful for extra credit portions):
+      :confidences: an np array indicating the confidence (strength) of each interest point
+      :scale: an np array indicating the scale of each interest point
+      :orientation: an np array indicating the orientation of each interest point
+  
+      '''
+  
+      # TODO: Your implementation here!
+      if image.ndim == 3:
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+  
+      image = img_as_int(image)
+  
+      Ix = sobel_v(image)
+      Iy = sobel_h(image)
+      Ix2 = Ix * Ix
+      Iy2 = Iy * Iy
+      Ixy = Ix * Iy
+      
+      k = 0.00001 
+      sigma = feature_width / 6.0 
+      min_distance = int(feature_width / 3) 
+      threshold_rate = 0.0005 
+      
+  
+      Sxx = gaussian(Ix2, sigma=sigma)
+      Syy = gaussian(Iy2, sigma=sigma)
+      Sxy = gaussian(Ixy, sigma=sigma)
+  
+      det_M = Sxx * Syy - Sxy * Sxy
+      trace_M = Sxx + Syy
+      harris_response = det_M - k * (trace_M ** 2)
+      threshold = threshold_rate * harris_response.max()
+      
+      coords = feature.peak_local_max(harris_response, min_distance=min_distance, threshold_abs=threshold)
+      ys, xs = coords[:, 0], coords[:, 1] # peak_local_max (row, col)， (y, x)
+  
+      border_margin = int(feature_width / 2)
+      height, width = image.shape
+      valid_indices = np.where(
+          (xs >= border_margin) & (xs < width - border_margin) &
+          (ys >= border_margin) & (ys < height - border_margin)
+      )
+      xs = xs[valid_indices]
+      ys = ys[valid_indices]
+  
+      # xs = np.asarray([0])
+      # ys = np.asarray([0])
+      return xs, ys
+  
+  
+  def get_features(image, x, y, feature_width):
+      '''
+      Returns a set of feature descriptors for a given set of interest points.
+  
+      (Please note that we reccomend implementing this function after you have implemented
+      match_features)
+  
+      To start with, you might want to simply use normalized patches as your
+      local feature. This is very simple to code and works OK. However, to get
+      full credit you will need to implement the more effective SIFT-like descriptor
+      (See Szeliski 4.1.2 or the original publications at
+      http://www.cs.ubc.ca/~lowe/keypoints/)
+  
+      Your implementation does not need to exactly match the SIFT reference.
+      Here are the key properties your (baseline) descriptor should have:
+      (1) a 4x4 grid of cells, each descriptor_window_image_width/4.
+      (2) each cell should have a histogram of the local distribution of
+          gradients in 8 orientations. Appending these histograms together will
+          give you 4x4 x 8 = 128 dimensions.
+      (3) Each feature should be normalized to unit length
+  
+      You do not need to perform the interpolation in which each gradient
+      measurement contributes to multiple orientation bins in multiple cells
+      As described in Szeliski, a single gradient measurement creates a
+      weighted contribution to the 4 nearest cells and the 2 nearest
+      orientation bins within each cell, for 8 total contributions. This type
+      of interpolation probably will help, though.
+  
+      You do not need to do the normalize -> threshold -> normalize again
+      operation as detailed in Szeliski and the SIFT paper. It can help, though.
+  
+      Another simple trick which can help is to raise each element of the final
+      feature vector to some power that is less than one.
+  
+      Useful functions: A working solution does not require the use of all of these
+      functions, but depending on your implementation, you may find some useful. Please
+      reference the documentation for each function/library and feel free to come to hours
+      or post on Piazza with any questions
+  
+          - skimage.filters (library)
+  
+  
+      :params:
+      :image: a grayscale or color image (your choice depending on your implementation)
+      :x: np array of x coordinates of interest points
+      :y: np array of y coordinates of interest points
+      :feature_width: in pixels, is the local feature width. You can assume
+                      that feature_width will be a multiple of 4 (i.e. every cell of your
+                      local SIFT-like feature will have an integer width and height).
+      If you want to detect and describe features at multiple scales or
+      particular orientations you can add input arguments.
+  
+      :returns:
+      :features: np array of computed features. It should be of size
+              [len(x) * feature dimensionality] (for standard SIFT feature
+              dimensionality is 128)
+  
+      '''
+  
+      # TODO: Your implementation here!
+  
+      # This is a placeholder - replace this with your features!
+      # features = np.asarray([0])
+  
+      num_interest_points = len(x)
+      features = np.zeros((num_interest_points, 128)) # 128 dimensions for SIFT-like descriptor
+  
+      # Convert image to grayscale if it's color (although input is expected to be grayscale based on notebook)
+      if image.ndim == 3:
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+  
+      # Convert image to float for gradient calculations
+      image = img_as_int(image)
+  
+      # Calculate gradients
+      # Using Sobel filters again for consistency with get_interest_points
+      Ix = sobel_v(image)
+      Iy = sobel_h(image)
+  
+      # Calculate gradient magnitude and orientation
+      magnitude = np.sqrt(Ix**2 + Iy**2)
+      # Add a small epsilon to avoid division by zero in arctan2 if both Ix and Iy are 0
+      orientation = np.arctan2(Iy, Ix + 1e-6) * 180 / np.pi # Convert to degrees
+      # Normalize orientation to be within [0, 360)
+      orientation = (orientation + 360) % 360
+  
+      # Define cell and bin parameters
+      num_cells = 4
+      num_bins = 8
+      cell_width = feature_width // num_cells
+      bin_size = 360 // num_bins # Size of each orientation bin in degrees
+  
+      # Process each interest point
+      for i in range(num_interest_points):
+          # Get the coordinates of the current interest point
+          px, py = x[i], y[i]
+  
+          # Define the bounding box for the feature window
+          # Need to be careful with boundary conditions
+          half_width = feature_width // 2
+          min_x = max(0, px - half_width)
+          max_x = min(image.shape[1] - 1, px + half_width -1) # -1 because max_x is inclusive index
+          min_y = max(0, py - half_width)
+          max_y = min(image.shape[0] - 1, py + half_width -1) # -1 because max_y is inclusive index
+  
+          # Ensure window size is correct even at boundaries
+          # This might require padding the image or adjusting the window size/handling points near border
+          # For simplicity here, we'll just take the available window and handle potential smaller size
+          # A more robust implementation might pad the image.
+  
+          # Extract the local patch
+          # Note: Slicing includes start but excludes end. Adjust max indices accordingly.
+          patch_mag = magnitude[min_y : max_y + 1, min_x : max_x + 1]
+          patch_ori = orientation[min_y : max_y + 1, min_x : max_x + 1]
+  
+          # Ensure patch is exactly feature_width x feature_width. If not, there's likely an issue with
+          # how interest points near the border were handled or how min/max were calculated.
+          # Given the border suppression in get_interest_points, this window *should* be full size
+          # if border_margin >= feature_width / 2.
+          # For now, proceed assuming full size or handle potential smaller size in histogramming.
+  
+          descriptor = np.zeros(num_cells * num_cells * num_bins) # 4x4 grid * 8 bins = 128
+  
+          # Build histograms for each cell
+          # Instead of iterating through cells then pixels, iterate through pixels and contribute to cells/bins
+          # We need patch-relative coordinates for interpolation
+          patch_height, patch_width = patch_mag.shape
+  
+          # Define Gaussian weighting window
+          # Sigma for Gaussian is typically half the window size
+          sigma_spatial = feature_width / 2.0
+          y_coords, x_coords = np.indices(patch_mag.shape)
+          # Calculate distance from the center of the patch (which aligns with the interest point)
+          # Center of patch is at (half_width - 0.5, half_width - 0.5) if patch is feature_width x feature_width
+          patch_center_r = patch_height / 2.0 - 0.5
+          patch_center_c = patch_width / 2.0 - 0.5
+          distances_sq = (x_coords - patch_center_c)**2 + (y_coords - patch_center_r)**2
+          gaussian_weights_patch = np.exp(-distances_sq / (2 * sigma_spatial**2))
+  
+          # Process each pixel in the patch
+          # Coordinates relative to the top-left of the patch (0 to feature_width-1)
+          for r in range(patch_height):
+              for c in range(patch_width):
+                  mag = patch_mag[r, c]
+                  ori = patch_ori[r, c]
+                  gaussian_weight = gaussian_weights_patch[r, c]
+  
+                  # Apply Gaussian weight to the magnitude
+                  weighted_mag = mag * gaussian_weight
+  
+                  # Normalize orientation to be within [0, 360) for bin calculation
+                  ori = (ori + 360) % 360
+  
+                  # Calculate the float bin index (0 to num_bins - epsilon)
+                  float_bin_index = ori / bin_size
+  
+                  # Get the two nearest integer bin indices
+                  bin1_index = int(np.floor(float_bin_index)) % num_bins
+                  bin2_index = int(np.ceil(float_bin_index)) % num_bins
+  
+                  # Calculate orientation weights for the two bins
+                  # Fractional part of the float bin index gives the position between the two bins
+                  fractional_part_ori = float_bin_index - np.floor(float_bin_index)
+                  ori_weight1 = (1 - fractional_part_ori) # Weight for bin1_index
+                  ori_weight2 = fractional_part_ori     # Weight for bin2_index
+  
+                  # Calculate spatial position relative to the top-left of the feature window (0 to feature_width-1)
+                  # and then map to cell coordinates (0 to num_cells)
+                  # Pixel (r, c) in patch is at (c, r) relative to patch top-left
+                  # Map patch coordinates to cell coordinates. Cell centers are at (0.5, 1.5, 2.5, 3.5) * cell_width + cell_width/2
+                  # Pixel (c, r) in patch falls into a cell with top-left at floor(c/cell_width)*cell_width, floor(r/cell_width)*cell_width
+  
+                  # Calculate float cell coordinates based on pixel position within the feature window (0 to num_cells)
+                  # Pixel (c, r) is at spatial location (c+0.5, r+0.5) within the patch (0 to feature_width)
+                  float_cell_x = (c + 0.5) / cell_width
+                  float_cell_y = (r + 0.5) / cell_width
+  
+                  # Get the two nearest integer cell indices in each dimension (0 to num_cells)
+                  cell1_x = int(np.floor(float_cell_x))
+                  cell2_x = int(np.ceil(float_cell_x))
+                  cell1_y = int(np.floor(float_cell_y))
+                  cell2_y = int(np.ceil(float_cell_y))
+  
+                  # Calculate spatial weights for the four cells (bilinear interpolation)
+                  fractional_part_x = float_cell_x - np.floor(float_cell_x)
+                  fractional_part_y = float_cell_y - np.floor(float_cell_y)
+  
+                  # Weights for the 4 target cells based on bilinear interpolation
+                  spatial_weight11 = (1 - fractional_part_x) * (1 - fractional_part_y) # cell1_x, cell1_y
+                  spatial_weight21 = fractional_part_x * (1 - fractional_part_y)     # cell2_x, cell1_y
+                  spatial_weight12 = (1 - fractional_part_x) * fractional_part_y     # cell1_x, cell2_y
+                  spatial_weight22 = fractional_part_x * fractional_part_y         # cell2_x, cell2_y
+  
+                  # Add weighted magnitude to the corresponding bins in the descriptor
+                  # Iterate over the 4 target cells and 2 target orientation bins
+                  target_contributions = [
+                      (cell1_x, cell1_y, spatial_weight11, bin1_index, ori_weight1),
+                      (cell1_x, cell1_y, spatial_weight11, bin2_index, ori_weight2),
+                      (cell2_x, cell1_y, spatial_weight21, bin1_index, ori_weight1),
+                      (cell2_x, cell1_y, spatial_weight21, bin2_index, ori_weight2),
+                      (cell1_x, cell2_y, spatial_weight12, bin1_index, ori_weight1),
+                      (cell1_x, cell2_y, spatial_weight12, bin2_index, ori_weight2),
+                      (cell2_x, cell2_y, spatial_weight22, bin1_index, ori_weight1),
+                      (cell2_x, cell2_y, spatial_weight22, bin2_index, ori_weight2),
+                  ]
+  
+                  for cur_cx, cur_cy, spatial_w, bin_idx, ori_w in target_contributions:
+                      # Ensure cell indices are within the 0-3 range
+                      if 0 <= cur_cx < num_cells and 0 <= cur_cy < num_cells:
+                           # Calculate the final weighted magnitude contribution
+                           final_weighted_mag = weighted_mag * spatial_w * ori_w
+  
+                           # Calculate the index in the flattened descriptor
+                           descriptor_index = (cur_cy * num_cells + cur_cx) * num_bins + bin_idx
+  
+                           # Add to the descriptor
+                           descriptor[descriptor_index] += final_weighted_mag
+  
+  
+          # Normalize the descriptor to unit length
+          # Add a small epsilon to the norm to prevent division by zero for uniform patches
+          norm = np.linalg.norm(descriptor) + 1e-6
+          descriptor /= norm
+  
+          # Apply thresholding and re-normalization (SIFT specific)
+          threshold_value = 0.2
+          descriptor[descriptor > threshold_value] = threshold_value
+  
+          # Second normalization after thresholding
+          norm = np.linalg.norm(descriptor) + 1e-6
+          descriptor /= norm
+  
+          # Assign the computed descriptor to the features array
+          features[i, :] = descriptor
+  
+  
+      return features
+  
+  
+  def match_features(im1_features, im2_features):
+      '''
+      Implements the Nearest Neighbor Distance Ratio Test to assign matches between interest points
+      in two images.
+  
+      Please implement the "Nearest Neighbor Distance Ratio (NNDR) Test" ,
+      Equation 4.18 in Section 4.1.3 of Szeliski.
+  
+      For extra credit you can implement spatial verification of matches.
+  
+      Please assign a confidence, else the evaluation function will not work. Remember that
+      the NNDR test will return a number close to 1 for feature points with similar distances.
+      Think about how confidence relates to NNDR.
+  
+      This function does not need to be symmetric (e.g., it can produce
+      different numbers of matches depending on the order of the arguments).
+  
+      A match is between a feature in im1_features and a feature in im2_features. We can
+      represent this match as a the index of the feature in im1_features and the index
+      of the feature in im2_features
+  
+      Useful functions: A working solution does not require the use of all of these
+      functions, but depending on your implementation, you may find some useful. Please
+      reference the documentation for each function/library and feel free to come to hours
+      or post on Piazza with any questions
+  
+          - zip (python built in function)
+  
+      :params:
+      :im1_features: an np array of features returned from get_features() for interest points in image1
+      :im2_features: an np array of features returned from get_features() for interest points in image2
+  
+      :returns:
+      :matches: an np array of dimension k x 2 where k is the number of matches. The first
+              column is an index into im1_features and the second column is an index into im2_features
+      :confidences: an np array with a real valued confidence for each match
+      '''
+  
+      # TODO: Your implementation here!
+  
+      # These are placeholders - replace with your matches and confidences!
+  
+      matches = []
+      confidences = []
+  
+      # Iterate through each feature in the first image
+      for i, feature1 in enumerate(im1_features):
+          # Calculate distances to all features in the second image
+          distances = np.linalg.norm(im2_features - feature1, axis=1)
+  
+          # Find the indices of the two smallest distances
+          # Use argpartition to find the indices of the k smallest elements efficiently
+          if len(distances) < 2:
+               # Need at least two features in im2 to calculate ratio
+               continue
+  
+          # Get indices of the two smallest distances
+          nearest_indices = np.argpartition(distances, 1)[:2]
+  
+          # Ensure we get the two actual smallest distances in correct order
+          if distances[nearest_indices[0]] > distances[nearest_indices[1]]:
+              nearest_indices = nearest_indices[[1, 0]] # Swap if necessary
+  
+          d1 = distances[nearest_indices[0]] # Distance to nearest neighbor
+          d2 = distances[nearest_indices[1]] # Distance to second nearest neighbor
+  
+          # Apply Nearest Neighbor Distance Ratio (NNDR) test
+          # A small ratio indicates a good match
+          if d2 > 0: # Avoid division by zero
+              ratio = d1 / d2
+          else:
+              # If second nearest neighbor has 0 distance, it's likely an identical feature
+              # Treat this as a very confident match (ratio approaches 0)
+              ratio = 0
+  
+          # Set a threshold for the ratio. This value may need tuning.
+          # A common starting point is 0.8
+          nndr_threshold = 0.8
+  
+          if ratio < nndr_threshold:
+              # This is considered a valid match
+              matches.append([i, nearest_indices[0]])
+  
+              # Calculate confidence (e.g., 1 - ratio, or based on ratio inverse)
+              # Lower ratio means higher confidence
+              confidence = 1.0 - ratio # Example confidence calculation
+              confidences.append(confidence)
+  
+      # Convert lists to numpy arrays
+      matches = np.asarray(matches)
+      confidences = np.asarray(confidences)
+  
+      # Optional: Sort matches by confidence in descending order
+      # (Useful for evaluation which might only look at top N matches)
+      # sort_indices = np.argsort(confidences)[::-1]
+      # matches = matches[sort_indices]
+      # confidences = confidences[sort_indices]
+  
+      return matches, confidences
+\end{lstlisting}

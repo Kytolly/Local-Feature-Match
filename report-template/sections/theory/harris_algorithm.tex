@@ -1,0 +1,20 @@
+\begin{algorithm}[H]
+    \caption{Pseudocode for Harris Corner Detection Algorithm}
+    \begin{algorithmic}[1]
+    \Require Grayscale image \(I\), window function \(w\), empirical constant \(k\)
+    \Ensure List of corner coordinates in the image
+    \State Convert input image to grayscale \(I\).
+    \State Calculate partial derivatives \(I_x\) and \(I_y\) of image \(I\) in \(x\) and \(y\) directions.
+    \State Compute \(I_x^2\), \(I_y^2\), and \(I_x I_y\).
+    \For{each pixel \((x,y)\) in the image}
+        \State Within the window centered at \((x,y)\), perform weighted summation of \(I_x^2\), \(I_y^2\), and \(I_x I_y\) using window function \(w\).
+        \State Construct structure tensor \(M\):
+        \[ M = \begin{bmatrix} \sum I_x^2 & \sum I_x I_y \\ \sum I_x I_y & \sum I_y^2 \end{bmatrix} \]
+        \State Calculate Harris response value \(R\) for this pixel:
+        \[ R = \det(M) - k (\operatorname{trace}(M))^2 \]
+    \EndFor
+    \State Apply thresholding to \(R\) values, select pixels with \(R\) greater than threshold \(T\) as candidate corners.
+    \State Perform non-maximum suppression on candidate corners, keeping only points with maximum \(R\) value in local regions.
+    \State Return the final list of corner coordinates.
+    \end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,42 @@
+\begin{algorithm}[H]
+    \caption{NNDR Algorithm Pseudocode}
+    \begin{algorithmic}[1]
+    \Require Feature descriptor set of image A \(D_A = \{d_{A1}, d_{A2}, ..., d_{Am}\}\)
+    \Require Feature descriptor set of image B \(D_B = \{d_{B1}, d_{B2}, ..., d_{Bn}\}\)
+    \Require Distance metric function \(dist(d_i, d_j)\)
+    \Require Threshold \(T\)
+    \Ensure List of valid matches from image A to image B \(Matches\)
+    
+    \State Initialize \(Matches \leftarrow \emptyset\)
+    
+    \For{each descriptor \(d_{Ai} \in D_A\)}
+        \Comment{Find nearest and second nearest neighbors of \(d_{Ai}\) in \(D_B\)}
+        \State Initialize \(d_{NN} \leftarrow \text{null}\), \(d_{SNN} \leftarrow \text{null}\)
+        \State Initialize \(dist_{NN} \leftarrow \infty\), \(dist_{SNN} \leftarrow \infty\)
+    
+        \For{each descriptor \(d_{Bj} \in D_B\)}
+            \State Calculate distance \(d_{ij} = dist(d_{Ai}, d_{Bj})\)
+            \If{\(d_{ij} < dist_{NN}\)}
+                \State \(dist_{SNN} \leftarrow dist_{NN}\)
+                \State \(d_{SNN} \leftarrow d_{NN}\)
+                \State \(dist_{NN} \leftarrow d_{ij}\)
+                \State \(d_{NN} \leftarrow d_{Bj}\)
+            \ElsIf{\(d_{ij} < dist_{SNN}\) and \(d_{ij} \ne dist_{NN}\)} \Comment{Ensure not the same point}
+                \State \(dist_{SNN} \leftarrow d_{ij}\)
+                \State \(d_{SNN} \leftarrow d_{Bj}\)
+            \EndIf
+        \EndFor
+    
+        \Comment{Calculate nearest neighbor distance ratio and apply threshold}
+        \If{\(dist_{SNN} > 0\)} \Comment{Avoid division by zero, need at least two different neighbors}
+            \State Calculate ratio \(R = \frac{dist_{NN}}{dist_{SNN}}\)
+            \If{\(R < T\)}
+                \State Add match pair \((d_{Ai}, d_{NN})\) to \(Matches\) list
+            \EndIf
+        \EndIf
+    \EndFor
+    
+    \State Return \(Matches\)
+    
+    \end{algorithmic}
+\end{algorithm}

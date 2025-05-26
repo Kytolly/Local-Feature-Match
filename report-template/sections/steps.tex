@@ -1,0 +1,30 @@
+\subsection{算法实现}
+根据实验原理和项目注释提示，
+依次实现get_features(), match_features(), get_interest_points()
+
+\subsection{Harris角点检测算法参数理解和调优}
+\begin{enumerate}
+    \item \textbf{sigma} (高斯滤波器的标准差):
+    用于对梯度乘积图 (\texttt{Ix2}, \texttt{Iy2}, \texttt{Ixy}) 进行高斯平滑。这个步骤的目的是计算结构张量 M 的积分（或加权平均），反映兴趣点周围一个区域的平均梯度信息。高斯权重使得离兴趣点中心越近的像素贡献越大。
+    较大的 \texttt{sigma} 会在更大的区域内进行平均，使得检测器对图像中的更大结构敏感。较小的 \texttt{sigma} 则更关注非常局部的结构。
+    该参数的选择值为 \texttt{sigma = feature\_width / 6.0}。
+
+
+    \item \textbf{k} (Harris 参数):
+    这是 Harris 响应函数中的一个敏感性参数。它平衡了结构张量行列式 (\(\text{det}(M)\)) 和迹 (\(\text{trace}(M)\)) 的贡献。
+    较小的 \texttt{k} 值会使得检测器对边缘更敏感，可能检测到更多边缘上的点。较大的 \texttt{k} 值会使得检测器更倾向于检测真正的角点（即在所有方向上都有高梯度变化的区域）。
+    调节参数为 \texttt{k}，三张图片的选取值均为0.00001 。
+
+
+    \item \textbf{threshold} (响应阈值):
+    在计算出 Harris 响应图后，使用这个阈值来选择响应值高于该阈值的像素点作为潜在的兴趣点。
+    较高的 \texttt{threshold} 会导致检测到的兴趣点数量减少，通常保留响应更强的"更好"的角点。较低的 \texttt{threshold} 会检测到更多点，包括一些响应较弱的点和潜在的噪声点。
+    该参数的选择值为 \texttt{threshold = 0.0005 * harris\_response.max()}。
+
+
+    \item \textbf{min\_distance} (非极大值抑制最小距离):
+    在通过阈值初步筛选出潜在兴趣点后，进行非极大值抑制 (Non-maximum Suppression, NMS)。它确保在检测到的兴趣点周围的一个 \texttt{min\_distance} 邻域内，只有响应值最高的那个点被保留。这避免了在同一个角点周围检测到多个兴趣点。
+    较大的 \texttt{min\_distance} 会使得检测到的兴趣点之间的间隔更大，数量减少。较小的 \texttt{min\_distance} 会允许更密集地检测兴趣点。
+    该参数的选择值为 \texttt{int(feature\_width / 3)}。
+
+\end{enumerate}
